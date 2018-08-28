@@ -180,31 +180,75 @@
 
 (defrecord TableImpl [builder ^KTable table]
   dsl/Table
-  (filter [this pred])
-  (filter [this pred materialized])
-  (filter-not [this pred])
-  (filter-not [this pred materialized])
-  (map-values [this vm])
-  (map-values [this vm materialized])
-  (to-stream [this])
-  (to-stream [this kvm])
-  (transform-values [this vts])
-  (transform-values [this vts materialized])
-  (join [this table value-joiner])
-  (join [this table value-joiner materialized])
-  (left-join [this table value-joiner])
-  (left-join [this table value-joiner materialized])
-  (outer-join [this table value-joiner])
-  (outer-join [this table value-joiner materialized]))
+  (filter [_ pred]
+    (->TableImpl builder
+                 (.filter table (u/->predicate pred))))
+  (filter [_ pred materialized]
+    (->TableImpl builder
+                 (.filter table (u/->predicate pred) materialized)))
+  (filter-not [_ pred]
+    (->TableImpl builder
+                 (.filterNot table (u/->predicate pred))))
+  (filter-not [_ pred materialized]
+    (->TableImpl builder
+                 (.filter table (u/->predicate pred) materialized)))
+  (map-values [_ vm]
+    (->TableImpl builder
+                 (.mapValues table (u/->value-mapper vm))))
+  (map-values [_ vm materialized]
+    (->TableImpl builder
+                 (.mapValues table (u/->value-mapper vm) materialized)))
+  (to-stream [_]
+    (->StreamImpl builder
+                  (.toStream table)))
+  (to-stream [_ kvm]
+    (->StreamImpl builder
+                  (.toStream table (u/->key-value-mapper kvm))))
+  (transform-values [_ vts store-names]
+    (->TableImpl builder
+                 (.transformValues table (u/->value-transformer-with-key-supplier vts) (into-array String store-names))))
+  (transform-values [_ vts store-names materialized]
+    (->TableImpl builder
+                 (.transformValues table (u/->value-transformer-with-key-supplier vts) (into-array String store-names) materialized)))
+  (group-by [_ kvm]
+    (->GroupedTableImpl builder
+                         (.groupBy table (u/->key-value-mapper kvm))))
+  (group-by [_ kvm serialized]
+    (->GroupedTableImpl builder
+                        (.groupBy table (u/->key-value-mapper kvm) serialized)))
+  (join [this table value-joiner]
+    (throw (UnsupportedOperationException.)))
+  (join [this table value-joiner materialized]
+    (throw (UnsupportedOperationException.)))
+  (left-join [this table value-joiner]
+    (throw (UnsupportedOperationException.)))
+  (left-join [this table value-joiner materialized]
+    (throw (UnsupportedOperationException.)))
+  (outer-join [this table value-joiner]
+    (throw (UnsupportedOperationException.)))
+  (outer-join [this table value-joiner materialized]
+    (throw (UnsupportedOperationException.))))
 
 (defrecord GroupedTableImpl [builder ^KGroupedTable table]
   dsl/GroupedTable
-  (count [this])
-  (count [this materialized])
-  (reduce [this r-add r-sub])
-  (reduce [this r-add r-sub materialized])
-  (aggregate [this init agg-add agg-sub])
-  (aggregate [this init agg-add agg-sub materialized]))
+  (count [_]
+    (->TableImpl builder
+                 (.count table)))
+  (count [_ materialized]
+    (->TableImpl builder
+                 (.count table materialized)))
+  (reduce [_ r-add r-sub]
+    (->TableImpl builder
+                 (.reduce table (u/->reducer r-add) (u/->reducer r-sub))))
+  (reduce [_ r-add r-sub materialized]
+    (->TableImpl builder
+                 (.reduce table (u/->reducer r-add) (u/->reducer r-sub) materialized)))
+  (aggregate [_ init agg-add agg-sub]
+    (->TableImpl builder
+                 (.aggregate table (u/->initializer init) (u/->aggregator agg-add) (u/->aggregator agg-sub))))
+  (aggregate [_ init agg-add agg-sub materialized]
+    (->TableImpl builder
+                 (.aggregate table (u/->initializer init) (u/->aggregator agg-add) (u/->aggregator agg-sub) materialized))))
 
 (defn builder
   []

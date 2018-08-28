@@ -73,6 +73,8 @@
   (to-stream [this kvm])
   (transform-values [this vts])
   (transform-values [this vts materialized])
+  (group-by [this kvm])
+  (group-by [this kvm serialized])
   (join [this table value-joiner])
   (join [this table value-joiner materialized])
   (left-join [this table value-joiner])

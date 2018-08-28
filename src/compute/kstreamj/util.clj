@@ -1,5 +1,5 @@
 (ns compute.kstreamj.util
-  (:import (org.apache.kafka.streams.kstream KeyValueMapper ValueMapper Predicate ForeachAction TransformerSupplier ValueTransformerSupplier Transformer ValueTransformer Materialized Reducer Initializer Aggregator Merger)
+  (:import (org.apache.kafka.streams.kstream KeyValueMapper ValueMapper Predicate ForeachAction TransformerSupplier ValueTransformerSupplier Transformer ValueTransformer Materialized Reducer Initializer Aggregator Merger ValueMapperWithKey ValueTransformerWithKeySupplier ValueTransformerWithKey)
            (org.apache.kafka.streams.processor Processor ProcessorSupplier)))
 
 (defmacro reify-function-class
@@ -24,6 +24,14 @@
       (apply [this# v#] (~f v#))))
   ([args & body]
    (reify-function-class ValueMapper args body)))
+
+(defmacro value-mapper-with-key
+  ([f]
+   `(reify
+      ValueMapperWithKey
+      (apply [k v] (~f k v))))
+  ([args & body]
+   (reify-function-class ValueMapperWithKey args body)))
 
 (defmacro predicate
   ([f]
@@ -80,6 +88,10 @@
   [& body]
   (reify-function-class ValueTransformerSupplier [] body))
 
+(defmacro value-transformer-with-key-supplier
+  [& body]
+  (reify-function-class ValueTransformerWithKeySupplier [] body))
+
 (defmacro processor-supplier
   [& body]
   (reify-function-class Processor [] body))
@@ -98,11 +110,39 @@
     (instance? KeyValueMapper kvm) kvm
     :else (throw (ex-info "Unknown key-value mapper type" {:kvm kvm}))))
 
+(defn- arity
+  "Returns the maximum arity of:
+    - anonymous functions like `#()` and `(fn [])`.
+    - defined functions like `map` or `+`.
+    - macros, by passing a var like `#'->`.
+
+  Returns `:variadic` if the function/macro is variadic."
+  [f]
+  (let [func (if (var? f) @f f)
+        methods (->> func class .getDeclaredMethods
+                     (map #(vector (.getName %)
+                                   (count (.getParameterTypes %)))))
+        var-args? (some #(-> % first #{"getRequiredArity"})
+                        methods)]
+    (if var-args?
+      :variadic
+      (let [max-arity (->> methods
+                           (filter (comp #{"invoke"} first))
+                           (sort-by second)
+                           last
+                           second)]
+        (if (and (var? f) (-> f meta :macro))
+          (- max-arity 2) ;; substract implicit &form and &env arguments
+          max-arity)))))
+
 (defn ->value-mapper
   [vm]
   (cond
-    (ifn? vm) (value-mapper vm)
+    (ifn? vm) (condp = (arity vm)
+                     1 (value-mapper vm)
+                     2 (value-mapper-with-key vm))
     (instance? ValueMapper vm) vm
+    (instance? ValueMapperWithKey vm) vm
     :else (throw (ex-info "Unknown value mapper type" {:vm vm}))))
 
 (defn ->for-each-action
@@ -155,6 +195,14 @@
     (instance? ValueTransformer vts) (value-transformer-supplier vts)
     (instance? ValueTransformerSupplier vts) vts
     :else (throw (ex-info "Unknown value-transformer supplier type" {:vts vts}))))
+
+(defn ->value-transformer-with-key-supplier
+  [vts]
+  (cond
+    (ifn? vts) (value-transformer-with-key-supplier (vts))
+    (instance? ValueTransformerWithKey vts) (value-transformer-with-key-supplier vts)
+    (instance? ValueTransformerWithKeySupplier vts) vts
+    :else (throw (ex-info "Unknown value-transformer-with-key supplier type" {:vts vts}))))
 
 (defn ->processor-supplier
   [ps]
