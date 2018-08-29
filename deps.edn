@@ -7,16 +7,9 @@
              com.fzakaria/slf4j-timbre                 {:mvn/version "0.3.8"}
              com.taoensso/timbre                       {:mvn/version "4.10.0"}
 
-             com.datomic/client-cloud                  {:mvn/version "0.8.52"}
              org.apache.kafka/kafka-streams            {:mvn/version "2.0.0-cp1"}
-             org.apache.kafka/kafka-clients            {:mvn/version "2.0.0-cp1"}
-             org.apache.kafka/kafka-streams-test-utils {:mvn/version "2.0.0-cp1"}
-             compute/config                            {:git/url "git@github.com:ComputeSoftware/config.git"
-                                                        :sha     "cdb9dd3f05bf88578fc5cb881f75fb4a0820f29f"}
-             compute/test-components                   {:git/url "git@github.com:ComputeSoftware/test-components.git"
-                                                        :sha     "5361937210a319bbd8818fbcf29994a1f1916d5e"}
-             compute/kafka-components                  {:git/url "git@github.com:ComputeSoftware/kafka-components.git"
-                                                        :sha     "118e094f81c7886d502bba5fcad721d1d43d1beb"}}
+             org.apache.kafka/kafka-clients            {:mvn/version "2.0.0-cp1"}}
  :aliases   {:test {:extra-paths ["test"]
                     :extra-deps  {org.clojure/test.check                    {:mvn/version "RELEASE"}
-                                  org.apache.kafka/kafka-streams-test-utils {:mvn/version "2.0.0-cp1"}}}}}
+                                  org.apache.kafka/kafka-streams-test-utils {:mvn/version "2.0.0-cp1"}
+                                  clj-kafka.franzy/nippy                    {:mvn/version "2.0.7"}}}}}
