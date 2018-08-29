@@ -26,3 +26,11 @@
 (defn streams
   [builder config]
   (KafkaStreams. (build builder) (map->properties config)))
+
+(defn start
+  [streams]
+  (.start streams))
+
+(defn close
+  [streams]
+  (.close streams))

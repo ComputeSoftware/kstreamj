@@ -9,9 +9,11 @@
            (org.apache.kafka.streams.state Stores)
            (org.apache.kafka.streams.processor Punctuator Processor TimestampExtractor PunctuationType)
            (org.apache.kafka.streams.kstream Transformer Materialized Windows TimeWindows)
-           (org.apache.kafka.streams KeyValue StreamsConfig)
+           (org.apache.kafka.streams KeyValue StreamsConfig TopologyTestDriver)
            (org.apache.kafka.clients.consumer ConsumerConfig ConsumerRecord)
-           (java.util.concurrent TimeUnit)))
+           (java.util.concurrent TimeUnit)
+           (org.apache.kafka.streams.test ConsumerRecordFactory)
+           (java.util UUID)))
 
 (log/set-level! :error)
 
@@ -39,6 +41,8 @@
 (def state-store-builder (Stores/keyValueStoreBuilder (Stores/inMemoryKeyValueStore state-store-name)
                                                       (NippySerde.) (NippySerde.)))
 
+(def end-of-time (.getTime #inst"2018-05-02T00:00:00.000-00:00"))
+
 (deftype SimulationTimestampExtractor []
   TimestampExtractor
   (^long extract [_ ^ConsumerRecord record ^long previousTimeStamp]
@@ -52,9 +56,10 @@
           state (.all state-store)]
       (println "------------- PUNCTUATE")
       (doseq [s (iterator-seq state)]
-        (println
-          (.value s)
-          (-> s (.key) (.window) (.end) (java.util.Date.)))))))
+        (when (not= end-of-time (-> s (.key) (.window) (.start)))
+          (println
+            (.value s)
+            (-> s (.key) (.window) (.end) (java.util.Date.))))))))
 
 (deftype SimulationTransformer [^{:volatile-mutable true} context]
   Transformer
@@ -62,6 +67,7 @@
     (set! context c))
   ;;; Schedule punctuation
   (transform [_ k v]
+
     (let [state-store (.getStateStore context state-store-name)
           state (or (.get state-store k) {:count 10})
           state' (assoc state :demand (rand-int 10))]
@@ -82,7 +88,7 @@
           state (or (.get state-store k) {})
           state' (update state :count update-fn)]
       (.put state-store k state')
-      (KeyValue/pair k state')))
+      (KeyValue/pair k (merge state' v))))
   (close [_]))
 
 (deftype DoinkProcessor [^{:volatile-mutable true} context]
@@ -96,12 +102,13 @@
 
 
 (def kafka-config
-  {StreamsConfig/APPLICATION_ID_CONFIG            "example-consumer"
+  {StreamsConfig/APPLICATION_ID_CONFIG (str (UUID/randomUUID))
    StreamsConfig/BOOTSTRAP_SERVERS_CONFIG         "localhost:9092"
    StreamsConfig/CACHE_MAX_BYTES_BUFFERING_CONFIG 0
    StreamsConfig/COMMIT_INTERVAL_MS_CONFIG        100000
    StreamsConfig/DEFAULT_KEY_SERDE_CLASS_CONFIG   NippySerde
    StreamsConfig/DEFAULT_VALUE_SERDE_CLASS_CONFIG NippySerde
+   StreamsConfig/DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG SimulationTimestampExtractor
    ConsumerConfig/AUTO_OFFSET_RESET_CONFIG        "earliest"})
 
 (defn foo
@@ -119,13 +126,23 @@
     (dsl/group-by-key!)
     (dsl/windowed-by! (TimeWindows/of (.toMillis TimeUnit/HOURS 1)))
     (dsl/aggregate! (constantly 0)
-                    (fn [k v total] (if (:end v) total (inc total)))
+                    (fn [k v total]  (if (:end v) total (inc total)))
                     (Materialized/as "doink"))
     (dsl/to-stream!)
     (dsl/process! (DoinkProcessor. nil) ["doink"]))
 
+(def test-driver (TopologyTestDriver. (streams/build builder) (streams/map->properties kafka-config)))
+(def crf (ConsumerRecordFactory. "simulation-ticks" (ns/nippy-serializer) (ns/nippy-serializer)))
 
+(def now (.getTime #inst"2018-04-30T00:00:00.000-00:00"))
+(def segs (conj (mapv #(assoc {} :time %)
+                      (range now
+                             (+ now (.toMillis TimeUnit/DAYS 1))
+                             (.toMillis TimeUnit/MINUTES 1)))
+                {:time end-of-time :end true}))
 
+(doseq [seg segs]
+  (.pipeInput test-driver (.create crf :foo seg)))
 
-#_(def test-driver (TopologyTestDriver. (.build builder) (map->properties kafka-config)))
-#_(def crf (ConsumerRecordFactory. "topic-input" (nippy-serializers/nippy-serializer) (nippy-serializers/nippy-serializer)))
+(.close test-driver)
+(System/gc)
