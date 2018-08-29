@@ -1,5 +1,6 @@
 (ns compute.kstreamj.impl
-  (:require [compute.kstreamj.dsl :as dsl]
+  (:require [clojure.zip :as zip]
+            [compute.kstreamj.dsl :as dsl]
             [compute.kstreamj.util :as u])
   (:import (org.apache.kafka.streams StreamsBuilder)
            (org.apache.kafka.streams.kstream KStream Predicate Windows SessionWindows KGroupedStream TimeWindowedKStream SessionWindowedKStream KTable KGroupedTable)))
@@ -20,7 +21,7 @@
     (.addStateStore builder supplier)
     this))
 
-(defrecord StreamImpl [^StreamsBuilder builder ^KStream stream]
+(deftype StreamImpl [^StreamsBuilder builder ^KStream stream]
   dsl/Stream
   (filter [_ pred]
     (->StreamImpl builder
@@ -47,8 +48,8 @@
     (.forEach stream (u/->for-each-action action))
     nil)
   (peek [this action]
-    (.peek stream (u/->for-each-action action))
-    this)
+    (->StreamImpl builder
+                  (.peek stream (u/->for-each-action action))))
   (branch [_ preds]
     (mapv #(->StreamImpl builder %) (.branch stream (into-array Predicate (map u/->predicate preds)))))
   (merge [_ s]
@@ -106,7 +107,7 @@
   (outer-join [this stream value-joiner join-windows joined]
     (throw (UnsupportedOperationException.))))
 
-(defrecord GroupedStreamImpl [builder ^KGroupedStream stream]
+(deftype GroupedStreamImpl [builder ^KGroupedStream stream]
   dsl/GroupedStream
   (count [_]
     (->TableImpl builder
@@ -136,7 +137,7 @@
       (->SessionWindowedStreamImpl builder
                                    (.windowedBy stream windows)))))
 
-(defrecord TimeWindowedStreamImpl [builder ^TimeWindowedKStream stream]
+(deftype TimeWindowedStreamImpl [builder ^TimeWindowedKStream stream]
   dsl/TimeWindowedStream
   (count [_]
     (->TableImpl builder
@@ -157,7 +158,7 @@
     (->TableImpl builder
                  (.aggregate stream (u/->initializer init) (u/->aggregator agg) materialized))))
 
-(defrecord SessionWindowedStreamImpl [builder ^SessionWindowedKStream stream]
+(deftype SessionWindowedStreamImpl [builder ^SessionWindowedKStream stream]
   dsl/SessionWindowedStream
   (count [_]
     (->TableImpl builder
@@ -178,7 +179,7 @@
     (->TableImpl builder
                  (.aggregate stream (u/->initializer init) (u/->aggregator agg) (u/->merger merg) materialized))))
 
-(defrecord TableImpl [builder ^KTable table]
+(deftype TableImpl [builder ^KTable table]
   dsl/Table
   (filter [_ pred]
     (->TableImpl builder
@@ -229,7 +230,7 @@
   (outer-join [this table value-joiner materialized]
     (throw (UnsupportedOperationException.))))
 
-(defrecord GroupedTableImpl [builder ^KGroupedTable table]
+(deftype GroupedTableImpl [builder ^KGroupedTable table]
   dsl/GroupedTable
   (count [_]
     (->TableImpl builder

@@ -2,11 +2,11 @@
   (:import (org.apache.kafka.streams.kstream KeyValueMapper ValueMapper Predicate ForeachAction TransformerSupplier ValueTransformerSupplier Transformer ValueTransformer Materialized Reducer Initializer Aggregator Merger ValueMapperWithKey ValueTransformerWithKeySupplier ValueTransformerWithKey)
            (org.apache.kafka.streams.processor Processor ProcessorSupplier)))
 
-(defmacro reify-function-class
-  [type args body]
+(defn reify-function-class
+  [type f-name args body]
   `(reify
      ~type
-     (apply ~(vec (cons 'this# args))
+     (~f-name ~(vec (cons 'this# args))
        ~@body)))
 
 (defmacro key-value-mapper
@@ -15,7 +15,7 @@
       KeyValueMapper
       (apply [this# k# v#] (~f k# v#))))
   ([args & body]
-   (reify-function-class KeyValueMapper args body)))
+   (reify-function-class 'KeyValueMapper 'apply args body)))
 
 (defmacro value-mapper
   ([f]
@@ -23,80 +23,79 @@
       ValueMapper
       (apply [this# v#] (~f v#))))
   ([args & body]
-   (reify-function-class ValueMapper args body)))
+   (reify-function-class 'ValueMapper 'apply args body)))
 
 (defmacro value-mapper-with-key
   ([f]
    `(reify
       ValueMapperWithKey
-      (apply [k v] (~f k v))))
+      (apply [this# k# v#] (~f k# v#))))
   ([args & body]
-   (reify-function-class ValueMapperWithKey args body)))
+   (reify-function-class 'ValueMapperWithKey 'apply args body)))
 
 (defmacro predicate
   ([f]
    `(reify
       Predicate
-      (test [_ k v] (~f k v))))
+      (test [_this# k# v#] (~f k# v#))))
   ([args & body]
-   (reify-function-class Predicate args body)))
+   (reify-function-class 'Predicate 'test args body)))
 
 (defmacro for-each-action
   ([f]
    `(reify
       ForeachAction
-      (apply [_ k v] (~f k v))))
+      (apply [this# k# v#] (~f k# v#))))
   ([args & body]
-   (reify-function-class ForeachAction args body)))
+   (reify-function-class 'ForeachAction 'apply args body)))
 
 (defmacro reducer
   ([f]
    `(reify
       Reducer
-      (apply [_ agg v] (~f agg v))))
+      (apply [this# agg# v#] (~f agg# v#))))
   ([args & body]
-   (reify-function-class Reducer args body)))
+   (reify-function-class 'Reducer 'apply args body)))
 
 (defmacro initializer
   [f]
   `(reify
      Initializer
-     (apply [_] (~f))))
+     (apply [this#] (~f))))
 
 (defmacro aggregator
   ([f]
    `(reify
       Aggregator
-      (apply [_ k v agg] (~f k v agg))))
+      (apply [this# k# v# agg#] (~f k# v# agg#))))
   ([args & body]
-   (reify-function-class Aggregator args body)))
+   (reify-function-class 'Aggregator 'apply args body)))
 
 (defmacro merger
   ([f]
    `(reify
       Merger
-      (apply [_ k v1 v2] (~f k v1 v2))))
+      (apply [this# k# v1# v2#] (~f k# v1# v2#))))
   ([args & body]
-   (reify-function-class Merger args body)))
-
+   (reify-function-class 'Merger 'apply args body)))
 
 (defmacro transformer-supplier
   [& body]
-  (reify-function-class TransformerSupplier [] body))
+  (reify-function-class 'TransformerSupplier 'get [] (vec body)))
 
 (defmacro value-transformer-supplier
   [& body]
-  (reify-function-class ValueTransformerSupplier [] body))
+  (reify-function-class 'ValueTransformerSupplier 'get [] body))
 
 (defmacro value-transformer-with-key-supplier
   [& body]
-  (reify-function-class ValueTransformerWithKeySupplier [] body))
+  (reify-function-class 'ValueTransformerWithKeySupplier 'get [] body))
 
 (defmacro processor-supplier
   [& body]
-  (reify-function-class Processor [] body))
+  (reify-function-class 'ProcessorSupplier 'get [] body))
 
-(defn- ->predicate
+(defn ->predicate
   [pred]
   (cond
     (ifn? pred) (predicate pred)
@@ -211,8 +210,4 @@
     (instance? Processor ps) (processor-supplier ps)
     (instance? ProcessorSupplier ps) ps
     :else (throw (ex-info "Unknown processor supplier type" {:ps ps}))))
-
-(defn ->materialized
-  [m]
-  (cond))
     
