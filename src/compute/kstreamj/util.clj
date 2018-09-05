@@ -139,7 +139,9 @@
   (cond
     (ifn? vm) (condp = (arity vm)
                      1 (value-mapper vm)
-                     2 (value-mapper-with-key vm))
+                     2 (value-mapper-with-key vm)
+                     :variadic (throw (ex-info "Function for value mapping must be arity 1 or 2. Use an anonymous function to wrap variadic or partially applied functions." {}))
+                     (throw (ex-info "Function for value mapping must be arity 1 or 2." {})))
     (instance? ValueMapper vm) vm
     (instance? ValueMapperWithKey vm) vm
     :else (throw (ex-info "Unknown value mapper type" {:vm vm}))))
