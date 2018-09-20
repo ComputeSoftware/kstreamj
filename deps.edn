@@ -1,15 +1,11 @@
 {:paths     ["resources" "src"]
  :mvn/repos {"confluent" {:url "https://packages.confluent.io/maven/"}}
  :deps      {org.clojure/clojure                       {:mvn/version "1.9.0"}
-             org.clojure/core.async                    {:mvn/version "0.4.474"}
-             org.clojure/spec.alpha                    {:mvn/version "0.1.143"}
-
-             com.fzakaria/slf4j-timbre                 {:mvn/version "0.3.8"}
-             com.taoensso/timbre                       {:mvn/version "4.10.0"}
-
              org.apache.kafka/kafka-streams            {:mvn/version "2.0.0-cp1"}
              org.apache.kafka/kafka-clients            {:mvn/version "2.0.0-cp1"}}
  :aliases   {:test {:extra-paths ["test"]
                     :extra-deps  {org.clojure/test.check                    {:mvn/version "RELEASE"}
                                   org.apache.kafka/kafka-streams-test-utils {:mvn/version "2.0.0-cp1"}
-                                  clj-kafka.franzy/nippy                    {:mvn/version "2.0.7"}}}}}
+                                  clj-kafka.franzy/nippy                    {:mvn/version "2.0.7"}
+                                  com.fzakaria/slf4j-timbre                 {:mvn/version "0.3.8"}
+                                  com.taoensso/timbre                       {:mvn/version "4.10.0"}}}}}
