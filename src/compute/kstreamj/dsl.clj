@@ -186,7 +186,7 @@
 
 (defmethod foreach! [KStream 2]
   [stream action]
-  (.forEach stream (u/->for-each-action action)))
+  (.foreach stream (u/->for-each-action action)))
 
 (defmethod peek! [KStream 2]
   [stream action]

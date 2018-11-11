@@ -100,7 +100,6 @@
   (process [_ k v])
   (close [_]))
 
-
 (def kafka-config
   {StreamsConfig/APPLICATION_ID_CONFIG (str (UUID/randomUUID))
    StreamsConfig/BOOTSTRAP_SERVERS_CONFIG         "localhost:9092"
