@@ -34,3 +34,14 @@
 (defn close
   [streams]
   (.close streams))
+
+(defn clean-up
+  [streams]
+  (.cleanUp streams))
+
+(defn set-uncaught-exception-handler
+  [streams handler-fn]
+  (.setUncaughtExceptionHandler streams
+                                (reify Thread$UncaughtExceptionHandler
+                                  (uncaughtException [_ thread ex]
+                                    (handler-fn thread ex)))))
