@@ -185,7 +185,6 @@
   [ts]
   (cond
     (ifn? ts) (transformer-supplier (ts))
-    (instance? Transformer ts) (transformer-supplier ts)
     (instance? TransformerSupplier ts) ts
     :else (throw (ex-info "Unknown transformer supplier type" {:ts ts}))))
 
@@ -193,7 +192,6 @@
   [vts]
   (cond
     (ifn? vts) (value-transformer-supplier (vts))
-    (instance? ValueTransformer vts) (value-transformer-supplier vts)
     (instance? ValueTransformerSupplier vts) vts
     :else (throw (ex-info "Unknown value-transformer supplier type" {:vts vts}))))
 
@@ -201,7 +199,6 @@
   [vts]
   (cond
     (ifn? vts) (value-transformer-with-key-supplier (vts))
-    (instance? ValueTransformerWithKey vts) (value-transformer-with-key-supplier vts)
     (instance? ValueTransformerWithKeySupplier vts) vts
     :else (throw (ex-info "Unknown value-transformer-with-key supplier type" {:vts vts}))))
 
@@ -209,7 +206,6 @@
   [ps]
   (cond
     (ifn? ps) (processor-supplier (ps))
-    (instance? Processor ps) (processor-supplier ps)
     (instance? ProcessorSupplier ps) ps
     :else (throw (ex-info "Unknown processor supplier type" {:ps ps}))))
     
