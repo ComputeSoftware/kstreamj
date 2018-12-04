@@ -298,7 +298,7 @@
   [stream init agg]
   (.aggregate stream (u/->initializer init) (u/->aggregator agg)))
 
-(defmethod aggregate! [KGroupedStream 3]
+(defmethod aggregate! [KGroupedStream 4]
   [stream init agg materialized]
   (.aggregate stream (u/->initializer init) (u/->aggregator agg) materialized))
 
