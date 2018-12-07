@@ -351,7 +351,7 @@
   (.reduce stream (u/->reducer r) materialized))
 
 (defmethod aggregate! [SessionWindowedKStream 4]
-  [stream init merg agg]
+  [stream init agg merg]
   (.aggregate stream (u/->initializer init) (u/->aggregator agg) (u/->merger merg)))
 
 (defmethod aggregate! [SessionWindowedKStream 5]
